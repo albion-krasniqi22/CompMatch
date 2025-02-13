@@ -213,6 +213,8 @@ def load_static_data():
     # Both property_data and radix_df are from the same static source.
     radix_df = pd.read_csv(radix_file, dtype=str)
     property_data = pd.read_csv(radix_file, dtype=str)
+    property_data = property_data.copy()  # This ensures all columns are loaded
+
     # Combine address parts and normalize.
     radix_df['combined_address'] = (
         radix_df['ADDRESS'].fillna('') + ', ' +
