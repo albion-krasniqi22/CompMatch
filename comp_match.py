@@ -78,7 +78,6 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
     Identify competing properties within a given MSA.
     """
     msa_property_data = property_data[property_data['MSA'] == msa].copy()
-    st.write(msa_property_data.columns.tolist())
     st.write(f'Number of properties in {msa}: {msa_property_data.shape[0]}')
     
     # Convert numeric columns to appropriate data types
