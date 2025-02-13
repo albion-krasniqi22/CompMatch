@@ -153,6 +153,13 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
                                                      'MSA', 'YEAR_BUILT', 'distance_in_miles', 'CONSTRUCTION_TYPE',
                                                      'WS_BIKESCORE', 'WS_WALKSCORE', 'UNITS', 'UNIT_0_MIX',
                                                      'UNIT_1_MIX', 'UNIT_2_MIX', 'UNIT_3_MIX', 'Latest survey_date']]
+
+    competitors = comp_set.iloc[neighbors_lst, :][['PROPERTY_ID_S', 'NAME_S', 'NAME_C', 'SUBMARKET_C',
+                                                     'MSA', 'YEAR_BUILT', 'distance_in_miles', 'CONSTRUCTION_TYPE',
+                                                     'WS_BIKESCORE', 'WS_WALKSCORE', 'UNITS', 'UNIT_0_MIX',
+                                                     'UNIT_1_MIX', 'UNIT_2_MIX', 'UNIT_3_MIX', 'Latest survey_date',  'Sourced', 'Complete', 
+                                                     'Integrated', 'Viable', 'DataQuality', 'Is_Older_Than_15_Days', 'PMS_Guess']]
+                                                     
     
     competitors['Similarity_Score'] = similarity_score
     competitors['nr_of_props_in_comp_set'] = len(comp_set)
@@ -160,9 +167,48 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
     
     output_columns = ['PROPERTY_ID_S', 'NAME_S', 'NAME_C', 'YEAR_BUILT', 'distance_in_miles', 
                       'CONSTRUCTION_TYPE', 'WS_BIKESCORE', 'WS_WALKSCORE', 'UNITS', 
-                      'Similarity_Score', 'Latest survey_date']
+                      'Similarity_Score', 'Latest survey_date', 'Sourced', 'Complete', 'Integrated', 'Viable',
+                      'DataQuality', 'Is_Older_Than_15_Days', 'PMS_Guess']
+    
     
     return competitors[output_columns]
+
+## PROXIMITY - 35%
+weight_distance_in_miles = 35
+
+## YEAR_BUILT - 20%
+weight_year_build = 20
+
+#CONSTRUCTION_TYPE - 7.5%
+weight_construction_type = 7.5
+
+## BIKE & WALK SCORE - 15%
+weight_ws_bikescore = 7.5
+weight_ws_walkscore = 7.5
+
+## UNITS 15%
+weight_units = 3
+weight_unit_mix_0 = 3
+weight_unit_mix_1 = 3
+weight_unit_mix_2 = 3
+weight_unit_mix_3 = 3
+
+## SQFT 7.5%
+weight_sqft_0 = 1.875
+weight_sqft_1 = 1.875
+weight_sqft_2 = 1.875
+weight_sqft_3 = 1.875
+
+## NER 0%
+weight_ner_0 = 0
+weight_ner_1 = 0
+weight_ner_2 = 0
+weight_ner_3 = 0
+
+weighting_list = [weight_distance_in_miles, weight_year_build, weight_construction_type, weight_ws_bikescore, 
+                 weight_ws_walkscore, weight_units, weight_unit_mix_0, weight_unit_mix_1, weight_unit_mix_2, 
+                 weight_unit_mix_3, weight_sqft_0, weight_sqft_1, weight_sqft_2, weight_sqft_3]
+                 #weight_ner_0, weight_ner_1, weight_ner_2, weight_ner_3]
 
 # --- Load static data ---
 @st.cache_data
@@ -237,40 +283,45 @@ mapping_df = pd.DataFrame(mapping_results)
 st.write(f"Mapping complete. Total matched properties: {len(mapping_df)}")
 st.dataframe(mapping_df)
 
-# --- Competitor Analysis ---
-weighting_list = [35, 20, 7.5, 7.5, 7.5, 3, 3, 3, 3, 3, 1.875, 1.875, 1.875, 1.875]
-competitor_results_list = []
-
-st.header("Competitor Analysis")
-
-for idx, row in mapping_df.iterrows():
-    subject_property_id = row['RadixPropertyID']
-    msa = row['MSA']
-    st.write(f"Processing subject property {subject_property_id} in {msa}...")
-    try:
-        comp_df = find_competitors(msa, subject_property_id, property_data, weighting_list)
-        st.write(comp_df)
-    except Exception as e:
-        st.error(f"Error processing property {subject_property_id}: {e}")
-        continue
-    # Append competitor results along with a header row and a separator.
-    header_row = pd.DataFrame([comp_df.columns.tolist()], columns=comp_df.columns)
-    competitor_results_list.append(header_row)
-    competitor_results_list.append(comp_df)
-    blank_rows = pd.DataFrame([[""] * comp_df.shape[1]] * 2, columns=comp_df.columns)
-    competitor_results_list.append(blank_rows)
-
-if competitor_results_list:
-    final_competitors_df = pd.concat(competitor_results_list, ignore_index=True)
-    #st.write("Competitor Results:")
-    #st.dataframe(final_competitors_df)
+# Move competitor analysis into its own function
+def perform_competitor_analysis(mapping_df, property_data, weighting_list):
+    competitor_results_list = []
+    st.header("Competitor Analysis")
     
-    # Convert the final competitor DataFrame to CSV.
-    csv_data = final_competitors_df.to_csv(index=False).encode("utf-8")
+    for idx, row in mapping_df.iterrows():
+        subject_property_id = row['RadixPropertyID']
+        msa = row['MSA']
+        st.write(f"Processing subject property {subject_property_id} in {msa}...")
+        try:
+            comp_df = find_competitors(msa, subject_property_id, property_data, weighting_list)
+            st.write(comp_df)
+        except Exception as e:
+            st.error(f"Error processing property {subject_property_id}: {e}")
+            continue
+        # Append competitor results along with a header row and a separator
+        header_row = pd.DataFrame([comp_df.columns.tolist()], columns=comp_df.columns)
+        competitor_results_list.append(header_row)
+        competitor_results_list.append(comp_df)
+        blank_rows = pd.DataFrame([[""] * comp_df.shape[1]] * 2, columns=comp_df.columns)
+        competitor_results_list.append(blank_rows)
     
+    return competitor_results_list
+
+# Run analysis only if not already in session state
+if 'competitor_results' not in st.session_state:
+    competitor_results_list = perform_competitor_analysis(mapping_df, property_data, weighting_list)
+    if competitor_results_list:
+        # Skip the first header since it's redundant
+        competitor_results_list = competitor_results_list[1:]
+        final_competitors_df = pd.concat(competitor_results_list, ignore_index=True)
+        st.session_state.csv_data = final_competitors_df.to_csv(index=False).encode("utf-8")
+        st.session_state.competitor_results = True
+
+# Display download button if results exist
+if 'csv_data' in st.session_state:
     st.download_button(
         label="Download Competitor Results CSV",
-        data=csv_data,
+        data=st.session_state.csv_data,
         file_name="competitor_results.csv",
         mime="text/csv"
     )
