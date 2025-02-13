@@ -249,6 +249,7 @@ for idx, row in mapping_df.iterrows():
     st.write(f"Processing subject property {subject_property_id} in {msa}...")
     try:
         comp_df = find_competitors(msa, subject_property_id, property_data, weighting_list)
+        st.write(comp_df)
     except Exception as e:
         st.error(f"Error processing property {subject_property_id}: {e}")
         continue
@@ -261,8 +262,8 @@ for idx, row in mapping_df.iterrows():
 
 if competitor_results_list:
     final_competitors_df = pd.concat(competitor_results_list, ignore_index=True)
-    st.write("Competitor Results:")
-    st.dataframe(final_competitors_df)
+    #st.write("Competitor Results:")
+    #st.dataframe(final_competitors_df)
     
     # Convert the final competitor DataFrame to CSV.
     csv_data = final_competitors_df.to_csv(index=False).encode("utf-8")
