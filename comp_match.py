@@ -148,11 +148,6 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
     neighbors_lst = list(neighbors_arr[1][0])
     distance_score = list(neighbors_arr[0][0])
     similarity_score = [max(0, 100 - x) for x in distance_score]
-    
-    competitors = comp_set.iloc[neighbors_lst, :][['PROPERTY_ID_S', 'NAME_S', 'NAME_C', 'SUBMARKET_C',
-                                                     'MSA', 'YEAR_BUILT', 'distance_in_miles', 'CONSTRUCTION_TYPE',
-                                                     'WS_BIKESCORE', 'WS_WALKSCORE', 'UNITS', 'UNIT_0_MIX',
-                                                     'UNIT_1_MIX', 'UNIT_2_MIX', 'UNIT_3_MIX', 'Latest survey_date']]
 
     competitors = comp_set.iloc[neighbors_lst, :][['PROPERTY_ID_S', 'NAME_S', 'NAME_C', 'SUBMARKET_C',
                                                      'MSA', 'YEAR_BUILT', 'distance_in_miles', 'CONSTRUCTION_TYPE',
