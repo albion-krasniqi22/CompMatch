@@ -4,4 +4,3 @@ haversine
 rapidfuzz
 scikit-learn
 psutil
-gc
