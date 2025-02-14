@@ -9,30 +9,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
 import io
 import tempfile
-import psutil
+import gc  # Add this import at the top
 
 st.set_page_config(layout="wide", page_title="Competitor Matching App")
-
-# Add memory usage monitoring
-def get_memory_usage():
-    """Get current memory usage in MB"""
-    process = psutil.Process()
-    memory_mb = process.memory_info().rss / 1024 / 1024
-    return f"{memory_mb:.1f} MB"
-
-# Add memory usage display to sidebar
-st.sidebar.header("System Metrics")
-memory_placeholder = st.sidebar.empty()
-
-def update_memory_display():
-    memory_placeholder.metric(
-        label="Memory Usage",
-        value=get_memory_usage(),
-        delta=None
-    )
-
-# Initial memory display
-update_memory_display()
 
 st.title("Competitor Matching Workflow")
 
@@ -227,16 +206,15 @@ weighting_list = [weight_distance_in_miles, weight_year_build, weight_constructi
                  weight_unit_mix_3, weight_sqft_0, weight_sqft_1, weight_sqft_2, weight_sqft_3]
                  #weight_ner_0, weight_ner_1, weight_ner_2, weight_ner_3]
 
-# Separate the memory display update from the data loading
+# --- Load static data ---
 @st.cache_data
 def load_static_data():
-    """Load and process static data files"""
     radix_file = 'data_preperation_for_comp_match.csv'
     # Both property_data and radix_df are from the same static source.
     radix_df = pd.read_csv(radix_file, dtype=str)
     property_data = pd.read_csv(radix_file, dtype=str)
     property_data = property_data.copy()  # This ensures all columns are loaded
-    
+
     # Combine address parts and normalize.
     radix_df['combined_address'] = (
         radix_df['ADDRESS'].fillna('') + ', ' +
@@ -248,9 +226,7 @@ def load_static_data():
     radix_df['name_norm'] = radix_df['NAME'].apply(normalize_property_name)
     return radix_df, property_data
 
-# Load data and update memory display separately
 radix_df, property_data = load_static_data()
-update_memory_display()  # Update after loading data
 
 st.sidebar.header("Upload New Properties CSV")
 uploaded_new_file = st.sidebar.file_uploader("Upload CSV", type="csv")
@@ -258,7 +234,6 @@ uploaded_new_file = st.sidebar.file_uploader("Upload CSV", type="csv")
 if uploaded_new_file is not None:
     try:
         new_df = pd.read_csv(uploaded_new_file, dtype=str)
-        update_memory_display()  # Update after loading new file
     except Exception as e:
         st.error(f"Error reading CSV: {e}")
         st.stop()
@@ -310,35 +285,56 @@ def perform_competitor_analysis(mapping_df, property_data, weighting_list):
     competitor_results_list = []
     st.header("Competitor Analysis")
     
+    # Process properties in smaller batches
+    batch_size = 1  # Process one at a time
+    total_properties = len(mapping_df)
+    
+    progress_bar = st.progress(0)
     for idx, row in mapping_df.iterrows():
         subject_property_id = row['RadixPropertyID']
         msa = row['MSA']
-        st.write(f"Processing subject property {subject_property_id} in {msa}...")
+        st.write(f"Processing subject property {subject_property_id} in {msa}... ({idx + 1}/{total_properties})")
+        
         try:
             comp_df = find_competitors(msa, subject_property_id, property_data, weighting_list)
-            st.write(comp_df)
-            update_memory_display()  # Update after each property analysis
+            
+            # Add results to list
+            header_row = pd.DataFrame([comp_df.columns.tolist()], columns=comp_df.columns)
+            competitor_results_list.append(header_row)
+            competitor_results_list.append(comp_df)
+            blank_rows = pd.DataFrame([[""] * comp_df.shape[1]] * 2, columns=comp_df.columns)
+            competitor_results_list.append(blank_rows)
+            
+            # Clean up memory
+            del comp_df
+            del header_row
+            del blank_rows
+            gc.collect()
+            
         except Exception as e:
             st.error(f"Error processing property {subject_property_id}: {e}")
             continue
-        # Append competitor results along with a header row and a separator
-        header_row = pd.DataFrame([comp_df.columns.tolist()], columns=comp_df.columns)
-        competitor_results_list.append(header_row)
-        competitor_results_list.append(comp_df)
-        blank_rows = pd.DataFrame([[""] * comp_df.shape[1]] * 2, columns=comp_df.columns)
-        competitor_results_list.append(blank_rows)
+        
+        # Update progress
+        progress_bar.progress((idx + 1) / total_properties)
     
-    return competitor_results_list
-
-# Run analysis only if not already in session state
-if 'competitor_results' not in st.session_state:
-    competitor_results_list = perform_competitor_analysis(mapping_df, property_data, weighting_list)
+    # Combine results and clean up
     if competitor_results_list:
-        # Skip the first header since it's redundant
-        competitor_results_list = competitor_results_list[1:]
-        final_competitors_df = pd.concat(competitor_results_list, ignore_index=True)
+        final_df = pd.concat(competitor_results_list, ignore_index=True)
+        del competitor_results_list
+        gc.collect()
+        return final_df
+    return None
+
+# Modify the analysis execution section
+if 'competitor_results' not in st.session_state:
+    final_competitors_df = perform_competitor_analysis(mapping_df, property_data, weighting_list)
+    if final_competitors_df is not None:
         st.session_state.csv_data = final_competitors_df.to_csv(index=False).encode("utf-8")
         st.session_state.competitor_results = True
+        # Clean up
+        del final_competitors_df
+        gc.collect()
 
 # Display download button if results exist
 if 'csv_data' in st.session_state:
