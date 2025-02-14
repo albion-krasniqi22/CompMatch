@@ -270,7 +270,6 @@ for index, radix_row in radix_df.iterrows():
                     'RadixAddress': radix_row['combined_address'],
                     'NewName': new_row['Property Name'],
                     'NewAddress': new_row['Address'],
-                    '# Units': new_row['# Units'],
                     'addressScore': addr_score,
                     'nameScore': name_score
                 }
