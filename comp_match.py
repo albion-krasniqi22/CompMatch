@@ -92,36 +92,55 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
         if col in msa_property_data.columns:
             msa_property_data[col] = pd.to_numeric(msa_property_data[col], errors='coerce')
     
-    msa_property_data = pd.concat([msa_property_data] * len(msa_property_data), ignore_index=True)
+    # Get the subject property data
+    subject_property = msa_property_data[msa_property_data['PROPERTY_ID'] == subject_property_id].copy()
     
-    msa_subject_property_data = msa_property_data[['PROPERTY_ID', 'NAME', 'SUBMARKET', 'LONGTITUDE', 'LATITUDE']].copy()\
-                                        .sort_values(by='NAME').reset_index(drop=True)
-    msa_comparsion_property_data = msa_property_data.copy()
+    if subject_property.empty:
+        st.error(f"Subject property ID {subject_property_id} not found in MSA {msa}")
+        return pd.DataFrame()
     
-    result = pd.merge(msa_subject_property_data, msa_comparsion_property_data, left_index=True, right_index=True,
-                      how='outer', suffixes=('_S', '_C'))
+    # Create comparison data only for the subject property against all other properties
+    subject_cols = ['PROPERTY_ID', 'NAME', 'SUBMARKET', 'LONGTITUDE', 'LATITUDE']
+    subject_data = subject_property[subject_cols].copy()
     
+    # Create a cross join between subject property and all properties in MSA
+    result = pd.merge(
+        subject_data.assign(key=1),
+        msa_property_data.assign(key=1),
+        on='key', 
+        suffixes=('_S', '')
+    ).drop('key', axis=1)
+    
+    # Rename columns in the comparison data to match expected format
+    result = result.rename(columns={
+        'PROPERTY_ID': 'PROPERTY_ID_C',
+        'NAME': 'NAME_C',
+        'SUBMARKET': 'SUBMARKET_C'
+    })
+    
+    # Calculate distance between subject property and all other properties
     result['distance_in_miles'] = result.apply(lambda x: calculate_geospatial_distance(
             loc1=(x['LATITUDE_S'], x['LONGTITUDE_S']),
-            loc2=(x['LATITUDE_C'], x['LONGTITUDE_C'])
+            loc2=(x['LATITUDE'], x['LONGTITUDE'])
         ), axis=1)
     
-    comp_set = result[result['PROPERTY_ID_S'] == subject_property_id].reset_index(drop=True)
-    subject_property = comp_set[comp_set['PROPERTY_ID_C'] == subject_property_id]
-
+    # Filter to properties within 15 miles
+    comp_set = result[result['distance_in_miles'] <= 15].reset_index(drop=True)
     
+    # Count properties within 1 mile
     one_mile = comp_set[comp_set['distance_in_miles'] <= 1]
     st.write(f'Density within a mile: {len(one_mile)}')
     
-    comp_set = comp_set[comp_set['distance_in_miles'] <= 15]
+    # Get the subject property row for reference
+    subject_property_row = comp_set[comp_set['PROPERTY_ID_C'] == subject_property_id]
     
+    # Filter by walk and bike scores
     for col in ['WS_WALKSCORE', 'WS_BIKESCORE']:
         comp_set[col] = pd.to_numeric(comp_set[col], errors='coerce')
-        subject_property[col] = pd.to_numeric(subject_property[col], errors='coerce')
     
-    if not subject_property.empty:
-        subject_walkscore = subject_property['WS_WALKSCORE'].values[0]
-        subject_bikescore = subject_property['WS_BIKESCORE'].values[0]
+    if not subject_property_row.empty:
+        subject_walkscore = subject_property_row['WS_WALKSCORE'].values[0]
+        subject_bikescore = subject_property_row['WS_BIKESCORE'].values[0]
         comp_set = comp_set[(comp_set['WS_WALKSCORE'] >= subject_walkscore - 20) &
                             (comp_set['WS_WALKSCORE'] <= subject_walkscore + 20)]
         comp_set = comp_set[(comp_set['WS_BIKESCORE'] >= subject_bikescore - 20) &
@@ -255,7 +274,7 @@ for index, radix_row in radix_df.iterrows():
         addr_score = get_similarity_score(radix_row['addr_norm'], new_row['address_norm'])
         name_score = get_similarity_score(radix_row['name_norm'], new_row['name_norm'])
         exact_match = (radix_row['addr_norm'] == new_row['address_norm'])
-        cond2 = (addr_score >= 0.75 and name_score >= 0.90)
+        cond2 = (addr_score >= 0.60 and name_score >= 0.90)
         same_address_no = (get_address_number(radix_row['addr_norm']) == get_address_number(new_row['address_norm']))
         cond3 = (addr_score >= 0.75 and name_score >= 0.75 and same_address_no)
         cond4 = (addr_score >= 0.99)
