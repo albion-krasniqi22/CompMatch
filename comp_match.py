@@ -122,7 +122,7 @@ def get_msa_from_address(address):
     Uses OpenAI's API to extract the Metropolitan Statistical Area (MSA)
     from an address string.
     """
-    openai_api_key = st.secrets["openai"]["api_key"]
+    openai_api_key = st.secrets["OPENAI_API_KEY"]
     client = openai.OpenAI(api_key=openai_api_key)
     msa_list = ['Dallas, TX', 'Philadelphia, PA', 'Tampa, FL', 'San Diego, CA',
        'Austin, TX', 'Colorado Springs, CO', 'Mount Vernon, WA',
