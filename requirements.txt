@@ -4,3 +4,4 @@ haversine
 rapidfuzz
 scikit-learn
 psutil
+geopy
