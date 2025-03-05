@@ -5,3 +5,4 @@ rapidfuzz
 scikit-learn
 psutil
 geopy
+openai
