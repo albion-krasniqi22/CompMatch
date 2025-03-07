@@ -292,9 +292,9 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
     weighting_array = np.array(weighting_list[:len(training_cols)])
     training_data_scaled = training_data_scaled * weighting_array
     
-    neigh = NearestNeighbors(n_neighbors=7)
+    neigh = NearestNeighbors(n_neighbors=8)
     neigh.fit(training_data_scaled)
-    neighbors_arr = neigh.kneighbors([training_data_scaled[subject_index]], 7)
+    neighbors_arr = neigh.kneighbors([training_data_scaled[subject_index]], 8)
     neighbors_lst = list(neighbors_arr[1][0])
     distance_score = list(neighbors_arr[0][0])
     similarity_score = [max(0, 100 - x) for x in distance_score]
@@ -508,7 +508,10 @@ def run_radix_workflow(mapping_df, property_data, weighting_list):
             # Add the original Id to all rows in the competitor results
             if original_id:
                 comp_df['OriginalId'] = original_id
-                
+           
+            comp_df['Subject_In_Radix'] = None
+            comp_df.loc[comp_df['distance_in_miles'] == 0, 'Subject_In_Radix'] = 'Yes'
+
             competitor_results_list.append(comp_df)
         except Exception:
             # Silently count errors without displaying them
@@ -600,7 +603,6 @@ def run_new_property_workflow(new_df_not_in_radix, property_data, weighting_list
     comp_progress = st.progress(0)
     comp_status = st.empty()
     
-    # Fun messages for competitor analysis
     comp_messages = [
         "Finding the perfect competitors...",
         "Matching properties like a dating app, but for buildings...",
@@ -631,7 +633,11 @@ def run_new_property_workflow(new_df_not_in_radix, property_data, weighting_list
             # Add the original Id to all rows in the competitor results
             if original_id:
                 comp_df['OriginalId'] = original_id
-                
+
+            comp_df['Subject_In_Radix'] = None
+            comp_df.loc[comp_df['distance_in_miles'] == 0, 'Subject_In_Radix'] = 'No'
+
+
             competitor_results_list.append(comp_df)
         except Exception:
             # Silently count errors without displaying them
