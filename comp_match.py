@@ -302,7 +302,7 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
     competitors = comp_set.iloc[neighbors_lst, :][['PROPERTY_ID_S', 'NAME_S', 'NAME_C', 'SUBMARKET_C',
                                                      'MSA', 'YEAR_BUILT', 'distance_in_miles', 'CONSTRUCTION_TYPE',
                                                      'WS_BIKESCORE', 'WS_WALKSCORE', 'UNITS', 'UNIT_0_MIX',
-                                                     'UNIT_1_MIX', 'UNIT_2_MIX', 'UNIT_3_MIX', 'Latest survey_date', 
+                                                     'UNIT_1_MIX', 'UNIT_2_MIX', 'UNIT_3_MIX', 'SURVEY_DATE', 
                                                      'Integrated', 'Sourced', 'Viable', 'DataQuality', 'Is_Auto_Survey']]
                                                      
     
@@ -312,7 +312,7 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
     
     output_columns = ['PROPERTY_ID_S', 'NAME_S', 'NAME_C', 'YEAR_BUILT', 'distance_in_miles', 
                       'CONSTRUCTION_TYPE', 'WS_BIKESCORE', 'WS_WALKSCORE', 'UNITS', 
-                      'Similarity_Score', 'Latest survey_date', 'Integrated', 'Sourced',  'Viable',
+                      'Similarity_Score', 'SURVEY_DATE', 'Integrated', 'Sourced',  'Viable',
                       'DataQuality', 'Is_Auto_Survey']
     
     
