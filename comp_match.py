@@ -302,8 +302,8 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
     competitors = comp_set.iloc[neighbors_lst, :][['PROPERTY_ID_S', 'NAME_S', 'NAME_C', 'SUBMARKET_C',
                                                      'MSA', 'YEAR_BUILT', 'distance_in_miles', 'CONSTRUCTION_TYPE',
                                                      'WS_BIKESCORE', 'WS_WALKSCORE', 'UNITS', 'UNIT_0_MIX',
-                                                     'UNIT_1_MIX', 'UNIT_2_MIX', 'UNIT_3_MIX', 'Latest survey_date',  'Sourced', 'Complete', 
-                                                     'Integrated', 'Viable', 'DataQuality', 'Is_Older_Than_15_Days', 'PMS_Guess']]
+                                                     'UNIT_1_MIX', 'UNIT_2_MIX', 'UNIT_3_MIX', 'Latest survey_date', 
+                                                     'Integrated', 'Sourced', 'Viable', 'DataQuality', 'Is_Auto_Survey']]
                                                      
     
     competitors['Similarity_Score'] = similarity_score
@@ -312,8 +312,8 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
     
     output_columns = ['PROPERTY_ID_S', 'NAME_S', 'NAME_C', 'YEAR_BUILT', 'distance_in_miles', 
                       'CONSTRUCTION_TYPE', 'WS_BIKESCORE', 'WS_WALKSCORE', 'UNITS', 
-                      'Similarity_Score', 'Latest survey_date', 'Sourced', 'Complete', 'Integrated', 'Viable',
-                      'DataQuality', 'Is_Older_Than_15_Days', 'PMS_Guess']
+                      'Similarity_Score', 'Latest survey_date', 'Integrated', 'Sourced',  'Viable',
+                      'DataQuality', 'Is_Auto_Survey']
     
     
     return competitors[output_columns]
@@ -351,7 +351,7 @@ def check_if_property_exists(radix_df, new_row):
                     'NewAddress': new_row['Address'],
                     'addressScore': addr_score,
                     'nameScore': name_score,
-                    'OriginalId': new_row.get('Id', '')  # Preserve the original Id
+                    'saleforceId': new_row.get('Id', '')  # Preserve the original Id
                 }
     return best_candidate
 
@@ -441,7 +441,7 @@ weighting_list = [weight_distance_in_miles, weight_year_build, weight_constructi
 # --- Load static data ---
 @st.cache_data
 def load_static_data():
-    radix_file = 'data_preperation_for_comp_match.csv'
+    radix_file = 'data_preperation_for_comp_match_1.csv'
     # Both property_data and radix_df are from the same static source.
     radix_df = pd.read_csv(radix_file, dtype=str)
     property_data = pd.read_csv(radix_file, dtype=str)
