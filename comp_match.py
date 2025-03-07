@@ -195,7 +195,7 @@ def get_msa_from_address(address):
     )
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=20,
             temperature=0
@@ -292,12 +292,28 @@ def find_competitors(msa, subject_property_id, property_data, weighting_list):
     weighting_array = np.array(weighting_list[:len(training_cols)])
     training_data_scaled = training_data_scaled * weighting_array
     
-    neigh = NearestNeighbors(n_neighbors=8)
-    neigh.fit(training_data_scaled)
-    neighbors_arr = neigh.kneighbors([training_data_scaled[subject_index]], 8)
-    neighbors_lst = list(neighbors_arr[1][0])
-    distance_score = list(neighbors_arr[0][0])
-    similarity_score = [max(0, 100 - x) for x in distance_score]
+    for n_neighbors in [8, 7, 6, 5]:
+        if len(training_data) >= n_neighbors:
+            neigh = NearestNeighbors(n_neighbors=n_neighbors)
+            neigh.fit(training_data_scaled)
+            neighbors_arr = neigh.kneighbors([training_data_scaled[subject_index]], n_neighbors)
+            neighbors_lst = list(neighbors_arr[1][0])
+            distance_score = list(neighbors_arr[0][0])
+            similarity_score = [max(0, 100 - x) for x in distance_score]
+            break
+    else:
+        # If we can't even find 5 neighbors, use whatever we have
+        n_neighbors = min(len(training_data), 4)
+        if n_neighbors < 1:
+            raise ValueError(f"Not enough properties in MSA {msa} for comparison")
+
+
+        neigh = NearestNeighbors(n_neighbors=n_neighbors)
+        neigh.fit(training_data_scaled)
+        neighbors_arr = neigh.kneighbors([training_data_scaled[subject_index]], n_neighbors)
+        neighbors_lst = list(neighbors_arr[1][0])
+        distance_score = list(neighbors_arr[0][0])
+        similarity_score = [max(0, 100 - x) for x in distance_score]
 
     competitors = comp_set.iloc[neighbors_lst, :][['PROPERTY_ID_S', 'NAME_S', 'NAME_C', 'SUBMARKET_C',
                                                      'MSA', 'YEAR_BUILT', 'distance_in_miles', 'CONSTRUCTION_TYPE',
